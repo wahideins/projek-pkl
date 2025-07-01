@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $title }} - Dokumentasi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .prose h1 { @apply text-3xl font-bold mb-4; }
+        .prose p { @apply text-gray-700 leading-relaxed; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm w-full border-b border-gray-200 z-10">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Kiri: Logo dan Pilihan Kategori -->
+                    <div class="flex items-center space-x-8">
+                        <a href="#" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
+                        
+                        <!-- Pilihan Kategori Dokumentasi -->
+                        <div class="hidden md:flex items-center space-x-2 rounded-lg bg-gray-100 p-1">
+                            <a href="{{ route('docs', ['category' => 'epesantren']) }}" 
+                               class="px-3 py-1 text-sm font-medium rounded-md transition-colors
+                                      {{ $currentCategory == 'epesantren' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
+                                Epesantren
+                            </a>
+                            <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" 
+                               class="px-3 py-1 text-sm font-medium rounded-md transition-colors
+                                      {{ $currentCategory == 'adminsekolah' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
+                                Admin Sekolah
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Kanan: Logout -->
+                    <div class="flex items-center">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">
+                                Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar Navigasi -->
+            <aside class="w-64 flex-shrink-0 overflow-y-auto bg-white border-r border-gray-200 p-6 hidden md:block">
+                <h3 class="text-xs font-semibold uppercase text-gray-500 tracking-wider mb-4">Navigasi</h3>
+                <nav class="flex flex-col space-y-2">
+                    @foreach($navigation as $item)
+                        <a href="{{ $item['url'] }}" class="px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+                            {{ $item['title'] }}
+                        </a>
+                    @endforeach
+                </nav>
+            </aside>
+
+            <!-- Konten Dokumentasi -->
+            <main class="flex-1 overflow-y-auto p-8 lg:p-12">
+                <div class="prose max-w-none">
+                    {!! $content !!}
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
