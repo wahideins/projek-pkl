@@ -15,17 +15,11 @@ class DocumentationController extends Controller
      */
     public function show($category = 'epesantren', $page = 'introduction'): View
     {
-        $navigation = [];
-        $title = '';
+        // Ambil semua menu untuk kategori yang dipilih dari database
+        $allMenus = Navmenu::where('category', $category)->orderBy('menu_order')->get();
+        $navigation = $this->buildMenuTree($allMenus, 0, $category);
         
-        if ($category === 'adminsekolah') {
-            $allMenus = Navmenu::orderBy('menu_order')->get();
-            $navigation = $this->buildMenuTree($allMenus);
-            $title = 'Dokumentasi Admin Sekolah';
-        } else { // Logika untuk Epesantren
-            $navigation = $this->getEpesantrenNavigation();
-            $title = 'Dokumentasi Epesantren';
-        }
+        $title = 'Dokumentasi ' . Str::headline($category);
 
         $pageSlug = Str::slug($page);
         $path = resource_path("docs/{$category}/{$pageSlug}.md");
@@ -46,16 +40,18 @@ class DocumentationController extends Controller
     }
 
     /**
-     * Membangun menu untuk Admin Sekolah dari database.
+     * Membangun menu hierarkis dari database.
      */
-    private function buildMenuTree($elements, $parentId = 0): array
+    private function buildMenuTree($elements, $parentId, $category): array
     {
         $branch = [];
         foreach ($elements as $element) {
             if ($element->menu_child == $parentId) {
+                // Buat link yang benar berdasarkan kategori dan nama menu
                 $pageSlug = Str::slug($element->menu_nama);
-                $element->menu_link = route('docs', ['category' => 'adminsekolah', 'page' => $pageSlug]);
-                $children = $this->buildMenuTree($elements, $element->menu_id);
+                $element->menu_link = route('docs', ['category' => $category, 'page' => $pageSlug]);
+                
+                $children = $this->buildMenuTree($elements, $element->menu_id, $category);
                 if ($children) {
                     $element->children = $children;
                 }
@@ -63,24 +59,5 @@ class DocumentationController extends Controller
             }
         }
         return $branch;
-    }
-
-    /**
-     * Menyediakan menu statis untuk Epesantren.
-     */
-    private function getEpesantrenNavigation(): array
-    {
-        return [
-            (object)[
-                'menu_nama' => 'Pendahuluan', 
-                'menu_link' => route('docs', ['category' => 'epesantren', 'page' => 'introduction']), 
-                'menu_icon' => 'fa fa-book', 
-            ],
-            (object)[
-                'menu_nama' => 'Instalasi', 
-                'menu_link' => route('docs', ['category' => 'epesantren', 'page' => 'instalasi']), 
-                'menu_icon' => 'fa fa-download',
-            ],
-        ];
     }
 }
