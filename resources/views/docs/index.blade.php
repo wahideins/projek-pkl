@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title }} - Dokumentasi</title>
+    <title>{{ $title ?? 'Dokumentasi' }} - Projek PKL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,31 +22,38 @@
                 <div class="flex h-16 items-center justify-between">
                     <!-- Kiri: Logo dan Pilihan Kategori -->
                     <div class="flex items-center space-x-8">
-                        <a href="#" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
+                        <a href="{{ route('home') }}" class="text-2xl font-bold text-blue-600">ProjekPKL</a>
                         
-                        <!-- Pilihan Kategori Dokumentasi -->
                         <div class="hidden md:flex items-center space-x-2 rounded-lg bg-gray-100 p-1">
                             <a href="{{ route('docs', ['category' => 'epesantren']) }}" 
                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors
-                                      {{ $currentCategory == 'epesantren' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
+                                      {{ ($currentCategory ?? 'epesantren') == 'epesantren' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
                                 Epesantren
                             </a>
                             <a href="{{ route('docs', ['category' => 'adminsekolah']) }}" 
                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors
-                                      {{ $currentCategory == 'adminsekolah' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
+                                      {{ ($currentCategory ?? '') == 'adminsekolah' ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-200' }}">
                                 Admin Sekolah
                             </a>
                         </div>
                     </div>
 
-                    <!-- Kanan: Logout -->
+                    <!-- Kanan: Tombol Login/Logout Dinamis -->
                     <div class="flex items-center">
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">
-                                Log Out
-                            </button>
-                        </form>
+                        @guest
+                            <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
+                                Log In
+                            </a>
+                        @endguest
+
+                        @auth
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">
+                                    Log Out
+                                </button>
+                            </form>
+                        @endauth
                     </div>
                 </div>
             </div>
