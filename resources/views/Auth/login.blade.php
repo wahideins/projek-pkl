@@ -29,10 +29,16 @@
         </div>
 
         <!-- Login Form -->
-        <!-- Replace '#' with your actual login route, e.g., '{{ route('login') }}' in Blade -->
-        <form action="#" method="POST">
-            <!-- CSRF Token (important for Laravel) -->
-            <!-- <input type="hidden" name="_token" value="{{ csrf_token() }}"> -->
+        <form action="{{ route('login') }}" method="POST">
+            {{-- THIS IS THE FIX: Add the @csrf token --}}
+            @csrf
+
+            <!-- Display Validation Errors -->
+            @error('email')
+                <div class="mb-4 p-4 bg-red-100 text-red-700 border border-red-200 rounded-lg" role="alert">
+                    <span>{{ $message }}</span>
+                </div>
+            @enderror
 
             <!-- Email Input -->
             <div class="mb-4">
