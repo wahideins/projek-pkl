@@ -4,12 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DocumentationController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
-
 // Jadikan halaman dokumentasi sebagai halaman utama
 Route::get('/', [DocumentationController::class, 'show'])->name('home');
 

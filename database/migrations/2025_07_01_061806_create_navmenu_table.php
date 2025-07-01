@@ -19,6 +19,8 @@ return new class extends Migration
             $table->unsignedInteger('menu_child');
             $table->integer('menu_order');
             $table->integer('menu_status')->default(0);
+            $table->string('category', 50)->default('adminsekolah')->index();
+
         });
     }
 
