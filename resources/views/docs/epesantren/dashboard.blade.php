@@ -3,7 +3,6 @@
 	<head>
 		<meta charset="utf-8">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-		<title>CKEditor 5 Sample</title>
 		<link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
 		<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
 	</head>

@@ -25,10 +25,8 @@ class NavMenu extends Model
         'category', // Tambahkan ini
     ];
 
-<<<<<<< HEAD
     public function content(){
-        return $this->hasOne(DocsContent::class, 'menu_id', 'menu_id');
-=======
+        return $this->hasOne(DocsContent::class, 'menu_id', 'menu_id');}
     // Jika ada relasi parent-child untuk menu, kamu bisa definisikan di sini
     public function parent()
     {
@@ -38,6 +36,5 @@ class NavMenu extends Model
     public function children()
     {
         return $this->hasMany(NavMenu::class, 'menu_child', 'menu_id');
->>>>>>> refs/remotes/origin/main
     }
 }
