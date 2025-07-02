@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Navmenu extends Model
+class NavMenu extends Model
 {
     use HasFactory;
 
-    protected $table = 'navmenu';
-    protected $primaryKey = 'menu_id';
-    public $timestamps = false; // Tabel ini tidak memiliki kolom created_at/updated_at
+    protected $table = 'navmenu'; // Nama tabel
+    protected $primaryKey = 'menu_id'; // Primary key
+    public $timestamps = false; // Karena tabel tidak memiliki kolom created_at dan updated_at
 
     protected $fillable = [
         'menu_nama',
@@ -20,5 +20,18 @@ class Navmenu extends Model
         'menu_child',
         'menu_order',
         'menu_status',
+        'menu_content',
+        'category', // Tambahkan ini
     ];
+
+    // Jika ada relasi parent-child untuk menu, kamu bisa definisikan di sini
+    public function parent()
+    {
+        return $this->belongsTo(NavMenu::class, 'menu_child', 'menu_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(NavMenu::class, 'menu_child', 'menu_id');
+    }
 }
