@@ -1,10 +1,11 @@
 <?php
+// File: app/Models/DocsContent.php
+// PERBAIKAN: Menambahkan 'menu_id' ke $fillable
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Navmenu;
+use Illuminate\Database\Eloquent\Model;
 
 class DocsContent extends Model
 {
@@ -13,11 +14,18 @@ class DocsContent extends Model
     protected $table = 'docs';
     protected $primaryKey = 'docs_id';
 
+    /**
+     * Atribut yang boleh diisi secara massal.
+     */
     protected $fillable = [
         'content',
     ];
 
-    public function menu() {
-        return $this->belongsTo(Navmenu::class, 'menu_id', 'menu_id');
+    /**
+     * Relasi kembali ke menu-nya.
+     */
+    public function menu()
+    {
+        return $this->belongsTo(NavMenu::class, 'menu_id', 'menu_id');
     }
 }
