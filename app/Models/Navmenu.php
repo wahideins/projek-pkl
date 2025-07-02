@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DocsContent;
 
 class NavMenu extends Model
 {
@@ -24,6 +25,8 @@ class NavMenu extends Model
         'category', // Tambahkan ini
     ];
 
+    public function content(){
+        return $this->hasOne(DocsContent::class, 'menu_id', 'menu_id');}
     // Jika ada relasi parent-child untuk menu, kamu bisa definisikan di sini
     public function parent()
     {
