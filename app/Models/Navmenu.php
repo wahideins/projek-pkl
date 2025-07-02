@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\DocsContent;
 
 class Navmenu extends Model
 {
@@ -21,4 +22,8 @@ class Navmenu extends Model
         'menu_order',
         'menu_status',
     ];
+
+    public function content(){
+        return $this->hasOne(DocsContent::class, 'menu_id', 'menu_id');
+    }
 }

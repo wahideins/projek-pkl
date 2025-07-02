@@ -58,45 +58,11 @@
             </aside>
 
             <!-- Konten Dokumentasi (Hanya untuk Tampilan) -->
-            <main class="flex-1 overflow-y-auto p-8 lg:p-12">
-                <div class="prose max-w-none">
-                    {!! Str::markdown($content) !!}
+            <main>
+                <div class="prose max-w-none" style="max-width:75vw; margin:10px; min-height:100%;">
+                    @include($content)
                 </div>
             </main>
         </div>
-        <script type="importmap">
-            {
-                "imports": {
-                    "ckeditor5": "../../../assets/vendor/ckeditor5.js",
-                    "ckeditor5/": "../../../assets/vendor/"
-                }
-            }
-        </script>
-        <script type="module">
-            import {
-                ClassicEditor,
-                Essentials,
-                Paragraph,
-                Bold,
-                Italic,
-                Font
-            } from 'ckeditor5';
-
-            ClassicEditor
-                .create( document.querySelector( '#editor' ), {
-                    licenseKey: '', // Or 'GPL'.
-                    plugins: [ Essentials, Paragraph, Bold, Italic, Font ],
-                    toolbar: [
-                        'undo', 'redo', '|', 'bold', 'italic', '|',
-                        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor'
-                    ]
-                } )
-                .then( editor => {
-                    window.editor = editor;
-                } )
-                .catch( error => {
-                    console.error( error );
-                } );
-        </script>
     </body>
 </html>
