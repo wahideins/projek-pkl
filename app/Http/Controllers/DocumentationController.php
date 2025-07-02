@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Navmenu;
-use App\Models\DocsContent;
+use App\Models\NavMenu;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -16,60 +14,28 @@ class DocumentationController extends Controller
      */
     public function show($category = 'epesantren', $page = 'introduction'): View
     {
-        $allMenus = Navmenu::where('category', $category)->orderBy('menu_order')->get();
-        $navigation = $this->buildMenuTree($allMenus, 0, $category);
-
-        $menuIds = $allMenus->pluck('menu_id');
-
-        $docsContent = DocsContent::with('menu')
-            ->whereIn('menu_id', $menuIds)
-            ->get();
+        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
         
-        $contents = $docsContent->pluck('content');
+        // GANTI BARIS INI
+        $navigation = NavMenu::buildTree($allMenus); // Memanggil static method dari Model
 
+        $selectedNavItem = $allMenus->firstWhere('menu_link', route('docs', ['category' => $category, 'page' => $page]));
         
-        $title = 'Dokumentasi ' . Str::headline($category);
+        $content = $selectedNavItem ? ($selectedNavItem->docsContent->content ?? '# Halaman Belum Ada Konten') : '# Selamat Datang';
+        $contentHtml = Str::markdown($content);
 
-        $pageSlug = Str::slug($page);
-        $path = resource_path("views/docs/{$category}/{$pageSlug}.blade.php");
-        
-        if (!File::exists($path)) {
-            File::ensureDirectoryExists(dirname($path));
-            File::put($path, "# " . Str::headline($page) . $contents);
-        }
-        $viewName = $viewName = "docs.{$category}.{$pageSlug}";
-        $content = $viewName;
+        $allParentMenus = NavMenu::where('category', $category)->where('menu_child', 0)->orderBy('menu_nama')->get();
 
         return view('docs.index', [
-            'title' => $title,
+            'title' => 'Dokumentasi ' . Str::headline($category),
             'navigation' => $navigation,
-            'content' => $content,
+            'content' => $contentHtml,
             'currentCategory' => $category,
-            'currentPage' => $pageSlug,
+            'currentPage' => $page,
+            'selectedNavItem' => $selectedNavItem,
+            'allParentMenus' => $allParentMenus,
         ]);
-
-        return view($viewName);
     }
 
-    /**
-     * Membangun menu hierarkis dari database.
-     */
-    private function buildMenuTree($elements, $parentId, $category): array
-    {
-        $branch = [];
-        foreach ($elements as $element) {
-            if ($element->menu_child == $parentId) {
-                // Buat link yang benar berdasarkan kategori dan nama menu
-                $pageSlug = Str::slug($element->menu_nama);
-                $element->menu_link = route('docs', ['category' => $category, 'page' => $pageSlug]);
-                
-                $children = $this->buildMenuTree($elements, $element->menu_id, $category);
-                if ($children) {
-                    $element->children = $children;
-                }
-                $branch[] = $element;
-            }
-        }
-        return $branch;
-    }
+    // private function buildMenuTree(...) <-- HAPUS SELURUH FUNGSI INI
 }
