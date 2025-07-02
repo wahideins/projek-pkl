@@ -20,6 +20,8 @@ class NavMenu extends Model
         'menu_child',
         'menu_order',
         'menu_status',
+        'menu_content',
+        'category', // Tambahkan ini
     ];
 
     // Jika ada relasi parent-child untuk menu, kamu bisa definisikan di sini
