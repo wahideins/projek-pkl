@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style> 
+    <style>
         body { font-family: 'Inter', sans-serif; }
         /* Styling dasar untuk konten dari file markdown */
         .prose h1 { @apply text-3xl font-bold mb-4 text-gray-800; }
@@ -23,7 +23,6 @@
 </head>
 <body class="bg-gray-100">
     <div class="flex h-screen flex-col">
-        <!-- Header -->
         <header class="bg-white shadow-sm w-full border-b border-gray-200 z-10">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 items-center justify-between">
@@ -35,6 +34,9 @@
                         </div>
                     </div>
                     <div class="flex items-center">
+                        {{-- Tambahkan link ke halaman manajemen navigasi di sini --}}
+                        <a href="{{ route('navigasi.index') }}" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 mr-4">Kelola Navigasi</a>
+
                         @guest
                             <a href="{{ route('login') }}" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Log In</a>
                         @endguest
@@ -46,9 +48,7 @@
             </div>
         </header>
 
-        <!-- Main Content Area -->
         <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar Navigasi -->
             <aside class="w-72 flex-shrink-0 overflow-y-auto bg-white border-r border-gray-200 p-6 hidden md:block">
                 <nav>
                     <ul class="w-full">
@@ -57,7 +57,6 @@
                 </nav>
             </aside>
 
-            <!-- Konten Dokumentasi (Hanya untuk Tampilan) -->
             <main class="flex-1 overflow-y-auto p-8 lg:p-12">
                 <div class="prose max-w-none">
                     {!! Str::markdown($content) !!}
