@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const notifId = 'notif-' + Date.now();
         const notifDiv = document.createElement('div');
         notifDiv.id = notifId;
-        notifDiv.className = notification-message ${type};
+        notifDiv.className = `notification-message ${type}`;
         notifDiv.textContent = message;
         container.appendChild(notifDiv);
         
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url, mergedOptions);
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || HTTP error! status: ${response.status});
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             return await response.json();
         } catch (error) {
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form_menu_child').value = parentId;
             document.getElementById('form_menu_status').checked = true;
         } else if (mode === 'edit' && menuData) {
-            modalTitle.textContent = Edit Menu: ${menuData.menu_nama};
+            modalTitle.textContent = `Edit Menu: ${menuData.menu_nama}`;
             document.getElementById('form_menu_id').value = menuData.menu_id;
             document.getElementById('form_menu_nama').value = menuData.menu_nama;
             document.getElementById('form_menu_icon').value = menuData.menu_icon;
@@ -355,13 +355,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Ketika merefresh sidebar, kita perlu mempertahankan state menu yang sedang aktif
             // agar path menu yang aktif tetap terbuka.
-            // Anda perlu memastikan API /api/navigasi/all/${currentCategory} 
-            // mengembalikan HTML yang sudah memperhitungkan selectedNavItemId dan selectedParentIds
+            // Anda perlu memastikan API `/api/navigasi/all/${currentCategory}` 
+            // mengembalikan HTML yang sudah memperhitungkan `selectedNavItemId` dan `selectedParentIds`
             // agar sub-menu yang relevan terbuka secara otomatis saat dirender ulang.
             const currentSelectedLink = document.querySelector('.menu-item-link.bg-blue-100');
             const currentSelectedId = currentSelectedLink ? currentSelectedLink.closest('[data-menu-id]')?.dataset.menuId : null;
 
-            const url = /api/navigasi/all/${currentCategory} + (currentSelectedId ? ?selected_id=${currentSelectedId} : '');
+            const url = `/api/navigasi/all/${currentCategory}` + (currentSelectedId ? `?selected_id=${currentSelectedId}` : '');
 
             const data = await fetchAPI(url);
             const sidebarNav = document.getElementById('sidebar-navigation');
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const menuId = parentMenu.dataset.menuId;
-                const subMenu = document.getElementById(sub-menu-${menuId});
+                const subMenu = document.getElementById(`sub-menu-${menuId}`);
                 const arrowIcon = parentMenu.querySelector('.menu-arrow');
 
                 if (subMenu) {
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation(); // Mencegah event dari bubbling ke elemen lain
                 const menuId = e.currentTarget.dataset.menuId;
                 try {
-                    const menuData = await fetchAPI(/api/navigasi/${menuId});
+                    const menuData = await fetchAPI(`/api/navigasi/${menuId}`);
                     openMenuModal('edit', menuData);
                 } catch (error) {
                     showNotification('Gagal memuat data menu.', 'error');
@@ -434,8 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.stopPropagation(); // Mencegah event dari bubbling ke elemen lain
                 const menuId = e.currentTarget.dataset.menuId;
                 const menuNama = e.currentTarget.dataset.menuNama;
-                if (confirm(Yakin ingin menghapus menu "${menuNama}"? Ini akan menghapus semua sub-menunya.)) {
-                    fetchAPI(/api/navigasi/${menuId}, { method: 'DELETE' })
+                if (confirm(`Yakin ingin menghapus menu "${menuNama}"? Ini akan menghapus semua sub-menunya.`)) {
+                    fetchAPI(`/api/navigasi/${menuId}`, { method: 'DELETE' })
                         .then(data => {
                             showNotification(data.success, 'success');
                             refreshSidebar();
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const menuId = formData.get('menu_id');
             const method = document.getElementById('form_method').value;
             
-            const url = menuId ? /api/navigasi/${menuId} : '/api/navigasi';
+            const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
             let options = {
                 method: method === 'PUT' ? 'POST' : method, // HTML forms don't support PUT directly, use POST + _method override
                 body: JSON.stringify(Object.fromEntries(formData)),
