@@ -100,91 +100,15 @@
                 <nav id="sidebar-navigation">
                     {{-- Dapatkan jalur ID menu induk yang terpilih --}}
                     @php
-                        $selectedParentIds = [];
-                        if (isset($selectedNavItem) && $selectedNavItem) {
-                            $tempItem = $selectedNavItem;
-                            // Asumsi $allParentMenus adalah koleksi datar dari semua objek menu
-                            // Pastikan ini tersedia dan benar di controller Anda
-                            // Contoh sederhana:
-                            // $allParentMenus = \App\Models\Menu::all(); // Pastikan Anda memuat ini di Controller
-                            while ($tempItem && $tempItem->menu_child != 0) {
-                                $selectedParentIds[] = $tempItem->menu_child;
-                                $tempItem = collect($allParentMenus)->firstWhere('menu_id', $tempItem->menu_child);
-                            }
-                            $selectedParentIds = array_reverse(array_unique($selectedParentIds));
-                        }
-
-                        // Fungsi rekursif untuk me-render item menu
-                        // Didefinisikan di sini agar tidak perlu file partial terpisah
-                        if (!function_exists('render_menu_item_inline')) {
-                            function render_menu_item_inline($item, $editorMode, $selectedNavItemId, $selectedParentIds, $level = 0) {
-                                $hasActualChildren = isset($item->children) && is_array($item->children) && count($item->children) > 0;
-                                $isActiveParent = in_array($item->menu_id, $selectedParentIds);
-                                $isActiveItem = (isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id);
-                                $isExpanded = $isActiveParent || $isActiveItem; // Menu terbuka jika salah satu anaknya aktif atau jika item itu sendiri aktif
-                                
-                                // Tentukan href: Jika punya anak, href adalah '#', selain itu href asli
-                                $linkHref = ($hasActualChildren) ? '#' : $item->menu_link;
-                                
-                                $output = '<div class="my-1 group">';
-                                $output .= '<div class="flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-white transition-colors ' . 
-                                            (($isActiveItem) ? 'bg-blue-100 font-semibold' : '') . 
-                                            (($hasActualChildren) ? ' cursor-pointer menu-parent-toggle' : ' cursor-pointer') . // Selalu cursor-pointer, menu-parent-toggle jika punya anak
-                                            '" ' . (($hasActualChildren) ? 'data-menu-id="' . $item->menu_id . '"' : '') . '>';
-                                
-                                $output .= '<a href="' . $linkHref . '" class="menu-item-link flex items-center flex-1 space-x-3">';
-                                if ($item->menu_icon) {
-                                    $output .= '<i class="' . $item->menu_icon . ' w-4 text-center"></i>';
-                                } else {
-                                    $output .= '<span class="w-4"></span>';
-                                }
-                                $output .= '<span>' . $item->menu_nama . '</span>';
-                                $output .= '</a>';
-
-                                if ($hasActualChildren) {
-                                    // Ikon panah, berputar jika sub-menu terbuka
-                                    $output .= '<span class="menu-arrow transform transition-transform duration-200 ' . ($isExpanded ? 'rotate-90' : '') . '">';
-                                    $output .= '<i class="fa-solid fa-chevron-right text-xs"></i>';
-                                    $output .= '</span>';
-                                }
-
-                                if (isset($editorMode) && $editorMode) {
-                                    $output .= '<div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">';
-                                    if ($item->menu_child == 0 || $hasActualChildren) {
-                                        $output .= '<button data-parent-id="' . $item->menu_id . '" class="add-child-menu-btn text-green-500 hover:text-green-700 p-1" title="Tambah Sub Menu">';
-                                        $output .= '<i class="fa-solid fa-plus-circle"></i>';
-                                        $output .= '</button>';
-                                    }
-                                    $output .= '<button data-menu-id="' . $item->menu_id . '" class="edit-menu-btn text-blue-500 hover:text-blue-700 p-1" title="Edit Menu">';
-                                    $output .= '<i class="fa-solid fa-pencil"></i>';
-                                    $output .= '</button>';
-                                    $output .= '<button data-menu-id="' . $item->menu_id . '" data-menu-nama="' . $item->menu_nama . '" class="delete-menu-btn text-red-500 hover:text-red-700 p-1" title="Hapus Menu">';
-                                    $output .= '<i class="fa-solid fa-trash"></i>';
-                                    $output .= '</button>';
-                                    $output .= '</div>';
-                                }
-                                $output .= '</div>'; // End of flex items-center div
-
-                                if ($hasActualChildren) {
-                                    // Sub-menu container, awalnya disembunyikan (max-h-0) kecuali jika expanded
-                                    $output .= '<div id="sub-menu-' . $item->menu_id . '" class="pl-6 mt-1 border-l border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ' . 
-                                                ($isExpanded ? 'max-h-screen' : 'max-h-0') . '">';
-                                    foreach ($item->children as $child) {
-                                        $output .= render_menu_item_inline($child, $editorMode, $selectedNavItemId, $selectedParentIds, $level + 1); // Rekursif call
-                                    }
-                                    $output .= '</div>'; // End of sub-menu div
-                                }
-                                $output .= '</div>'; // End of my-1 group div
-
-                                return $output;
-                            }
-                        }
+                        $editorMode = auth()->check(); // atau bisa langsung true untuk admin
                     @endphp
 
-                    {{-- Panggil fungsi rekursif untuk setiap item level teratas --}}
-                    @foreach($navigation as $item)
-                        {!! render_menu_item_inline($item, auth()->check(), $selectedNavItem->menu_id ?? null, $selectedParentIds ?? []) !!}
-                    @endforeach
+                    @include('docs._menu_item', [
+                        'items' => $navigation,
+                        'editorMode' => $editorMode,
+                        'selectedNavItemId' => $selectedNavItem->menu_id ?? null,
+                        'selectedParentIds' => $selectedParentIds ?? []
+                    ])
                 </nav>
             </aside>
 
@@ -496,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(data => {
                     showNotification(data.success, 'success');
                     closeMenuModal();
-                    refreshSidebar();
+                    setTimeout(() => location.reload(), 500);
                 })
                 .catch(err => {
                     // Error is already shown by fetchAPI
