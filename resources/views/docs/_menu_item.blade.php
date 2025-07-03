@@ -1,6 +1,6 @@
 @foreach($items as $item)
 <div class="my-1 group">
-    <div class="flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 transition-colors {{ (isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id) ? 'bg-blue-100 font-semibold' : '' }}">
+    <div class="flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-white transition-colors {{ (isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id) ? 'bg-blue-100 font-semibold' : '' }}">
         <a href="{{ $item->menu_link }}" class="menu-item-link flex items-center flex-1 space-x-3">
             @if($item->menu_icon)<i class="{{ $item->menu_icon }} w-4 text-center"></i>@else<span class="w-4"></span>@endif
             <span>{{ $item->menu_nama }}</span>
@@ -9,7 +9,7 @@
         @if(isset($editorMode) && $editorMode)
         <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {{-- Tombol Tambah Anak (hanya untuk level 1) --}}
-            @if ($item->menu_child == 0)
+            @if ($item->menu_child >= 0)
             <button data-parent-id="{{ $item->menu_id }}" class="add-child-menu-btn text-green-500 hover:text-green-700 p-1" title="Tambah Sub Menu">
                 <i class="fa-solid fa-plus-circle"></i>
             </button>
