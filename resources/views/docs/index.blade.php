@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
-	<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .prose h1 { @apply text-3xl font-bold mb-4 text-gray-800; }
@@ -28,7 +28,7 @@
         .modal.show { visibility: visible; opacity: 1; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); width: 90%; max-width: 600px; transform: translateY(-50px); transition: transform 0.3s ease-out; }
         .modal.show .modal-content { transform: translateY(0); }
-             .buttons{
+        .buttons{
             min-width: 100%;
             margin: 10px;
             display: flex;
@@ -97,34 +97,94 @@
                     </button>
                 </div>
                 @endauth
-
-                {{-- Ganti blok input pencarian lama dengan form ini --}}
-<form id="search-form" class="relative mb-4">
-    <input type="text" id="menu-search-input" placeholder="Cari menu & konten..." class="w-full pl-4 pr-10 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600">
-        <i class="fa fa-search"></i>
-    </button>
-</form>
-    <div id="search-results-modal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800" id="search-modal-title">Hasil Pencarian</h3>
-                <button id="close-search-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div id="search-results-body" class="max-h-[60vh] overflow-y-auto">
-                {{-- Hasil pencarian akan dimuat di sini oleh JavaScript --}}
-            </div>
-        </div>
-    </div>
-
-    {{-- Container untuk notifikasi --}}
-    <div id="notification-container"></div>
                 <nav id="sidebar-navigation">
-                    @include('docs._menu_item', [
-                        'items' => $navigation,
-                        'editorMode' => auth()->check(),
-                        'selectedNavItemId' => $selectedNavItem->menu_id ?? null
-                    ])
+                    {{-- Dapatkan jalur ID menu induk yang terpilih --}}
+                    @php
+                        $selectedParentIds = [];
+                        if (isset($selectedNavItem) && $selectedNavItem) {
+                            $tempItem = $selectedNavItem;
+                            // Asumsi $allParentMenus adalah koleksi datar dari semua objek menu
+                            // Pastikan ini tersedia dan benar di controller Anda
+                            // Contoh sederhana:
+                            // $allParentMenus = \App\Models\Menu::all(); // Pastikan Anda memuat ini di Controller
+                            while ($tempItem && $tempItem->menu_child != 0) {
+                                $selectedParentIds[] = $tempItem->menu_child;
+                                $tempItem = collect($allParentMenus)->firstWhere('menu_id', $tempItem->menu_child);
+                            }
+                            $selectedParentIds = array_reverse(array_unique($selectedParentIds));
+                        }
+
+                        // Fungsi rekursif untuk me-render item menu
+                        // Didefinisikan di sini agar tidak perlu file partial terpisah
+                        if (!function_exists('render_menu_item_inline')) {
+                            function render_menu_item_inline($item, $editorMode, $selectedNavItemId, $selectedParentIds, $level = 0) {
+                                $hasActualChildren = isset($item->children) && is_array($item->children) && count($item->children) > 0;
+                                $isActiveParent = in_array($item->menu_id, $selectedParentIds);
+                                $isActiveItem = (isset($selectedNavItemId) && $selectedNavItemId == $item->menu_id);
+                                $isExpanded = $isActiveParent || $isActiveItem; // Menu terbuka jika salah satu anaknya aktif atau jika item itu sendiri aktif
+                                
+                                // Tentukan href: Jika punya anak, href adalah '#', selain itu href asli
+                                $linkHref = ($hasActualChildren) ? '#' : $item->menu_link;
+                                
+                                $output = '<div class="my-1 group">';
+                                $output .= '<div class="flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-white transition-colors ' . 
+                                            (($isActiveItem) ? 'bg-blue-100 font-semibold' : '') . 
+                                            (($hasActualChildren) ? ' cursor-pointer menu-parent-toggle' : ' cursor-pointer') . // Selalu cursor-pointer, menu-parent-toggle jika punya anak
+                                            '" ' . (($hasActualChildren) ? 'data-menu-id="' . $item->menu_id . '"' : '') . '>';
+                                
+                                $output .= '<a href="' . $linkHref . '" class="menu-item-link flex items-center flex-1 space-x-3">';
+                                if ($item->menu_icon) {
+                                    $output .= '<i class="' . $item->menu_icon . ' w-4 text-center"></i>';
+                                } else {
+                                    $output .= '<span class="w-4"></span>';
+                                }
+                                $output .= '<span>' . $item->menu_nama . '</span>';
+                                $output .= '</a>';
+
+                                if ($hasActualChildren) {
+                                    // Ikon panah, berputar jika sub-menu terbuka
+                                    $output .= '<span class="menu-arrow transform transition-transform duration-200 ' . ($isExpanded ? 'rotate-90' : '') . '">';
+                                    $output .= '<i class="fa-solid fa-chevron-right text-xs"></i>';
+                                    $output .= '</span>';
+                                }
+
+                                if (isset($editorMode) && $editorMode) {
+                                    $output .= '<div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">';
+                                    if ($item->menu_child == 0 || $hasActualChildren) {
+                                        $output .= '<button data-parent-id="' . $item->menu_id . '" class="add-child-menu-btn text-green-500 hover:text-green-700 p-1" title="Tambah Sub Menu">';
+                                        $output .= '<i class="fa-solid fa-plus-circle"></i>';
+                                        $output .= '</button>';
+                                    }
+                                    $output .= '<button data-menu-id="' . $item->menu_id . '" class="edit-menu-btn text-blue-500 hover:text-blue-700 p-1" title="Edit Menu">';
+                                    $output .= '<i class="fa-solid fa-pencil"></i>';
+                                    $output .= '</button>';
+                                    $output .= '<button data-menu-id="' . $item->menu_id . '" data-menu-nama="' . $item->menu_nama . '" class="delete-menu-btn text-red-500 hover:text-red-700 p-1" title="Hapus Menu">';
+                                    $output .= '<i class="fa-solid fa-trash"></i>';
+                                    $output .= '</button>';
+                                    $output .= '</div>';
+                                }
+                                $output .= '</div>'; // End of flex items-center div
+
+                                if ($hasActualChildren) {
+                                    // Sub-menu container, awalnya disembunyikan (max-h-0) kecuali jika expanded
+                                    $output .= '<div id="sub-menu-' . $item->menu_id . '" class="pl-6 mt-1 border-l border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ' . 
+                                                ($isExpanded ? 'max-h-screen' : 'max-h-0') . '">';
+                                    foreach ($item->children as $child) {
+                                        $output .= render_menu_item_inline($child, $editorMode, $selectedNavItemId, $selectedParentIds, $level + 1); // Rekursif call
+                                    }
+                                    $output .= '</div>'; // End of sub-menu div
+                                }
+                                $output .= '</div>'; // End of my-1 group div
+
+                                return $output;
+                            }
+                        }
+                    @endphp
+
+                    {{-- Panggil fungsi rekursif untuk setiap item level teratas --}}
+                    @foreach($navigation as $item)
+                        {!! render_menu_item_inline($item, auth()->check(), $selectedNavItem->menu_id ?? null, $selectedParentIds ?? []) !!}
+                    @endforeach
                 </nav>
             </aside>
 
@@ -133,7 +193,7 @@
                 @auth
                 @if (isset($selectedNavItem))
                     <div class="absolute top-8 right-8 z-10">
-                         {{-- Tombol Edit Konten bisa ditambahkan di sini jika perlu --}}
+                        {{-- Tombol Edit Konten bisa ditambahkan di sini jika perlu --}}
                     </div>
                 @endif
                 @endauth
@@ -143,8 +203,6 @@
                 <div class="prose max-w-none" id="documentation-content" >
                     @include($viewPath)
                 </div>
-
-
             </main>
         </div>
     </div>
@@ -214,87 +272,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // =================================
-    // VARIABEL UTAMA
-    // =================================
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const currentCategory = document.getElementById('form_category')?.value || 'epesantren';
 
-    // =================================================
-    // LOGIKA PENCARIAN POPUP (MODAL)
-    // =================================================
-    const searchForm = document.getElementById('search-form');
-    const searchInput = document.getElementById('menu-search-input');
-    const searchModal = document.getElementById('search-results-modal');
-    const searchResultsBody = document.getElementById('search-results-body');
-    const closeSearchModalBtn = document.getElementById('close-search-modal-btn');
-    const searchModalTitle = document.getElementById('search-modal-title');
-
-    if (searchForm) {
-        searchForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const query = searchInput.value.trim();
-
-            if (query.length < 2) {
-                showNotification('Masukkan minimal 2 karakter untuk mencari.', 'error');
-                return;
-            }
-
-            searchModal.classList.add('show');
-            searchModalTitle.textContent = `Mencari untuk: "${query}"`;
-            searchResultsBody.innerHTML = '<p class="text-gray-500">Memuat hasil...</p>';
-
-            try {
-                const data = await fetchAPI(`/api/search?query=${query}&category=${currentCategory}`);
-                searchResultsBody.innerHTML = ''; // Kosongkan hasil
-
-                if (data.results && data.results.length > 0) {
-                    const resultList = document.createElement('ul');
-                    resultList.className = 'space-y-3';
-                    data.results.forEach(result => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `
-                            <a href="${result.url}" class="block p-3 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div class="font-semibold text-blue-600">${result.name}</div>
-                                <p class="text-sm text-gray-600 mt-1">${result.context}</p>
-                            </a>
-                        `;
-                        resultList.appendChild(li);
-                    });
-                    searchResultsBody.appendChild(resultList);
-                } else {
-                    searchResultsBody.innerHTML = '<p class="text-gray-500">Tidak ada hasil yang ditemukan.</p>';
-                }
-            } catch (error) {
-                searchResultsBody.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat mencari.</p>';
-            }
-        });
-    }
-
-    const closeSearchModal = () => searchModal.classList.remove('show');
-    if(closeSearchModalBtn) closeSearchModalBtn.addEventListener('click', closeSearchModal);
-    if(searchModal) searchModal.addEventListener('click', (e) => {
-        if (e.target === searchModal) {
-            closeSearchModal();
-        }
-    });
-
-    // =================================
-    // FUNGSI UTILITIES
-    // =================================
+    //=================================
+    // UTILITIES
+    //=================================
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const notifId = 'notif-' + Date.now();
         const notifDiv = document.createElement('div');
         notifDiv.id = notifId;
-        notifDiv.className = `notification-message ${type}`;
+        notifDiv.className = notification-message ${type};
         notifDiv.textContent = message;
         container.appendChild(notifDiv);
         
+        // Animate in
         setTimeout(() => notifDiv.classList.add('show'), 10);
+        // Animate out
         setTimeout(() => {
             notifDiv.classList.remove('show');
-            setTimeout(() => notifDiv.remove(), 500);
+            setTimeout(() => notifDiv.remove(), 500); // Remove from DOM after transition
         }, 3000);
     };
 
@@ -313,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url, mergedOptions);
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                throw new Error(errorData.message || HTTP error! status: ${response.status});
             }
             return await response.json();
         } catch (error) {
@@ -323,9 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // =================================
-    // LOGIKA MODAL EDIT MENU & SIDEBAR
-    // =================================
+    //=================================
+    // MODAL & FORM LOGIC
+    //=================================
     const menuModal = document.getElementById('menu-modal');
     const menuForm = document.getElementById('menu-form');
     const modalTitle = document.getElementById('modal-title');
@@ -340,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form_menu_child').value = parentId;
             document.getElementById('form_menu_status').checked = true;
         } else if (mode === 'edit' && menuData) {
-            modalTitle.textContent = `Edit Menu: ${menuData.menu_nama}`;
+            modalTitle.textContent = Edit Menu: ${menuData.menu_nama};
             document.getElementById('form_menu_id').value = menuData.menu_id;
             document.getElementById('form_menu_nama').value = menuData.menu_nama;
             document.getElementById('form_menu_icon').value = menuData.menu_icon;
@@ -355,21 +353,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const refreshSidebar = async () => {
         try {
-            const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
-            document.getElementById('sidebar-navigation').innerHTML = data.html;
-            attachEventListenersToSidebar();
+            // Ketika merefresh sidebar, kita perlu mempertahankan state menu yang sedang aktif
+            // agar path menu yang aktif tetap terbuka.
+            // Anda perlu memastikan API /api/navigasi/all/${currentCategory} 
+            // mengembalikan HTML yang sudah memperhitungkan selectedNavItemId dan selectedParentIds
+            // agar sub-menu yang relevan terbuka secara otomatis saat dirender ulang.
+            const currentSelectedLink = document.querySelector('.menu-item-link.bg-blue-100');
+            const currentSelectedId = currentSelectedLink ? currentSelectedLink.closest('[data-menu-id]')?.dataset.menuId : null;
+
+            const url = /api/navigasi/all/${currentCategory} + (currentSelectedId ? ?selected_id=${currentSelectedId} : '');
+
+            const data = await fetchAPI(url);
+            const sidebarNav = document.getElementById('sidebar-navigation');
+            sidebarNav.innerHTML = data.html;
+            attachEventListenersToSidebar(); // Re-attach listeners to new content
         } catch (error) {
             showNotification('Gagal memuat ulang sidebar.', 'error');
         }
     };
 
+    //=================================
+    // EVENT LISTENERS
+    //=================================
     const attachEventListenersToSidebar = () => {
+        // Event listener untuk TOGGLE sub-menu (accordion functionality)
+        document.querySelectorAll('.menu-parent-toggle').forEach(parentMenu => {
+            // Hapus event listener lama untuk mencegah duplikasi jika refreshSidebar dipanggil
+            parentMenu.removeEventListener('click', parentMenu._handleClick); 
+            
+            parentMenu._handleClick = function(e) {
+                // Mencegah toggle saat mengklik tombol edit/delete/add child
+                if (e.target.closest('.edit-menu-btn') || e.target.closest('.delete-menu-btn') || e.target.closest('.add-child-menu-btn')) {
+                    return;
+                }
+                
+                // Mencegah navigasi default jika ini adalah item yang bisa di-toggle
+                // dan hrefnya adalah '#'. Ini penting karena kita pakai href='#' untuk toggleable item
+                const linkElement = e.target.closest('a');
+                if (linkElement && linkElement.getAttribute('href') === '#') {
+                    e.preventDefault(); 
+                }
+
+                const menuId = parentMenu.dataset.menuId;
+                const subMenu = document.getElementById(sub-menu-${menuId});
+                const arrowIcon = parentMenu.querySelector('.menu-arrow');
+
+                if (subMenu) {
+                    const isHidden = subMenu.classList.contains('max-h-0');
+                    if (isHidden) {
+                        subMenu.classList.remove('max-h-0');
+                        subMenu.classList.add('max-h-screen');
+                        if (arrowIcon) arrowIcon.classList.add('rotate-90');
+                    } else {
+                        subMenu.classList.remove('max-h-screen');
+                        subMenu.classList.add('max-h-0');
+                        if (arrowIcon) arrowIcon.classList.remove('rotate-90');
+                    }
+                }
+            };
+            parentMenu.addEventListener('click', parentMenu._handleClick); // Tambahkan event listener baru
+        });
+
+        // Edit button
         document.querySelectorAll('.edit-menu-btn').forEach(button => {
             button.addEventListener('click', async (e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Mencegah event dari bubbling ke elemen lain
                 const menuId = e.currentTarget.dataset.menuId;
                 try {
-                    const menuData = await fetchAPI(`/api/navigasi/${menuId}`);
+                    const menuData = await fetchAPI(/api/navigasi/${menuId});
                     openMenuModal('edit', menuData);
                 } catch (error) {
                     showNotification('Gagal memuat data menu.', 'error');
@@ -377,36 +428,48 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // Delete button
         document.querySelectorAll('.delete-menu-btn').forEach(button => {
             button.addEventListener('click', (e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Mencegah event dari bubbling ke elemen lain
                 const menuId = e.currentTarget.dataset.menuId;
                 const menuNama = e.currentTarget.dataset.menuNama;
-                if (confirm(`Yakin ingin menghapus menu "${menuNama}"? Ini akan menghapus semua sub-menunya.`)) {
-                    fetchAPI(`/api/navigasi/${menuId}`, { method: 'DELETE' })
+                if (confirm(Yakin ingin menghapus menu "${menuNama}"? Ini akan menghapus semua sub-menunya.)) {
+                    fetchAPI(/api/navigasi/${menuId}, { method: 'DELETE' })
                         .then(data => {
                             showNotification(data.success, 'success');
                             refreshSidebar();
+                        })
+                        .catch(err => {
+                            // Error already shown by fetchAPI
                         });
                 }
             });
         });
 
+        // Add Child button
         document.querySelectorAll('.add-child-menu-btn').forEach(button => {
             button.addEventListener('click', (e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Mencegah event dari bubbling ke elemen lain
                 const parentId = e.currentTarget.dataset.parentId;
                 openMenuModal('create', null, parentId);
             });
         });
+        
+        // Menu item link: tidak perlu perubahan khusus. Mereka akan menavigasi seperti link biasa.
+        // Penanganan preventDefault sudah di handle di listener '.menu-parent-toggle'
     };
     
-    // =================================
-    // INISIALISASI EVENT LISTENER AWAL
-    // =================================
-    if (menuForm) {
+    // Initial listeners for auth-only elements (buttons like "Add Parent Menu", and modal handlers)
+    if (menuForm) { // Hanya jalankan ini jika elemen modal ada (yaitu, user login)
         document.getElementById('add-parent-menu-btn').addEventListener('click', () => openMenuModal('create', null, 0));
         document.getElementById('cancel-menu-form-btn').addEventListener('click', closeMenuModal);
+
+        menuModal.addEventListener('click', (e) => { // Tutup modal jika klik di luar content
+            if (e.target === menuModal) {
+                closeMenuModal();
+            }
+        });
 
         menuForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -414,17 +477,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const menuId = formData.get('menu_id');
             const method = document.getElementById('form_method').value;
             
-            const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
-            
-            const options = {
-                method: method === 'PUT' ? 'POST' : method,
+            const url = menuId ? /api/navigasi/${menuId} : '/api/navigasi';
+            let options = {
+                method: method === 'PUT' ? 'POST' : method, // HTML forms don't support PUT directly, use POST + _method override
                 body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                }
             };
+            
             if (method === 'PUT') {
-                options.headers = {'X-HTTP-Method-Override': 'PUT'};
-                let data = Object.fromEntries(formData);
-                data._method = 'PUT';
-                options.body = JSON.stringify(data);
+                options.headers['X-HTTP-Method-Override'] = 'PUT'; // Laravel can read this
             }
 
             fetchAPI(url, options)
@@ -434,10 +499,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     refreshSidebar();
                 })
                 .catch(err => {
-                    // Error sudah ditangani oleh fetchAPI
+                    // Error is already shown by fetchAPI
                 });
         });
 
+        // Panggil attachEventListenersToSidebar setelah DOM dimuat dan setiap kali sidebar di-refresh
+        attachEventListenersToSidebar();
+    } else {
+        // Untuk pengguna yang tidak login, panggil attachEventListenersToSidebar agar toggle berfungsi
+        // meskipun tombol CRUD tidak ada.
         attachEventListenersToSidebar();
     }
 });
