@@ -97,6 +97,14 @@
                     </button>
                 </div>
                 @endauth
+
+    <div class="relative mb-4">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <i class="fa fa-search text-gray-400"></i>
+        </span>
+        <input type="text" id="menu-search-input" placeholder="Cari menu..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
                 <nav id="sidebar-navigation">
                     @include('docs._menu_item', [
                         'items' => $navigation,
@@ -192,12 +200,53 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // =================================
+    // VARIABEL UTAMA
+    // =================================
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const currentCategory = document.getElementById('form_category')?.value || 'epesantren';
 
-    //=================================
+    // =================================================
+    // LOGIKA PENCARIAN MENU (DITEMPATKAN DI SINI)
+    // =================================================
+    const searchInput = document.getElementById('menu-search-input');
+    const sidebarNav = document.getElementById('sidebar-navigation');
+
+    if (searchInput && sidebarNav) {
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const allItems = sidebarNav.querySelectorAll('.my-1.group');
+
+            if (searchTerm === '') {
+                allItems.forEach(item => {
+                    item.style.display = 'block';
+                });
+                return;
+            }
+
+            allItems.forEach(item => {
+                item.style.display = 'none';
+            });
+
+            allItems.forEach(item => {
+                const link = item.querySelector('.menu-item-link');
+                const itemName = link ? link.textContent.toLowerCase() : '';
+
+                if (itemName.includes(searchTerm)) {
+                    item.style.display = 'block';
+                    let parent = item.parentElement.closest('.my-1.group');
+                    while (parent) {
+                        parent.style.display = 'block';
+                        parent = parent.parentElement.closest('.my-1.group');
+                    }
+                }
+            });
+        });
+    }
+
+    // =================================
     // UTILITIES
-    //=================================
+    // =================================
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
         const notifId = 'notif-' + Date.now();
@@ -207,12 +256,10 @@ document.addEventListener('DOMContentLoaded', () => {
         notifDiv.textContent = message;
         container.appendChild(notifDiv);
         
-        // Animate in
         setTimeout(() => notifDiv.classList.add('show'), 10);
-        // Animate out
         setTimeout(() => {
             notifDiv.classList.remove('show');
-            setTimeout(() => notifDiv.remove(), 500); // Remove from DOM after transition
+            setTimeout(() => notifDiv.remove(), 500);
         }, 3000);
     };
 
@@ -241,9 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    //=================================
+    // =================================
     // MODAL & FORM LOGIC
-    //=================================
+    // =================================
     const menuModal = document.getElementById('menu-modal');
     const menuForm = document.getElementById('menu-form');
     const modalTitle = document.getElementById('modal-title');
@@ -274,17 +321,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshSidebar = async () => {
         try {
             const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
-            const sidebarNav = document.getElementById('sidebar-navigation');
-            sidebarNav.innerHTML = data.html;
-            attachEventListenersToSidebar(); // Re-attach listeners to new content
+            document.getElementById('sidebar-navigation').innerHTML = data.html;
+            attachEventListenersToSidebar(); // Pasang ulang listener ke konten baru
         } catch (error) {
             showNotification('Gagal memuat ulang sidebar.', 'error');
         }
     };
 
-    //=================================
+    // =================================
     // EVENT LISTENERS
-    //=================================
+    // =================================
     const attachEventListenersToSidebar = () => {
         // Edit button
         document.querySelectorAll('.edit-menu-btn').forEach(button => {
@@ -333,7 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // Initial listeners for auth-only elements
+    // =================================
+    // INITIALIZATION
+    // =================================
     if (menuForm) {
         document.getElementById('add-parent-menu-btn').addEventListener('click', () => openMenuModal('create', null, 0));
         document.getElementById('cancel-menu-form-btn').addEventListener('click', closeMenuModal);
@@ -345,16 +393,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const method = document.getElementById('form_method').value;
             
             const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
+            
+            // Logika untuk form submission...
             const options = {
-                method: method === 'PUT' ? 'POST' : method, // HTML forms don't support PUT, so we use POST and a hidden _method field
+                method: method === 'PUT' ? 'POST' : method,
                 body: JSON.stringify(Object.fromEntries(formData)),
             };
-            // For PUT, we add the method override header or include it in the body
             if (method === 'PUT') {
-                 options.headers = {'X-HTTP-Method-Override': 'PUT'};
-                 let data = Object.fromEntries(formData);
-                 data._method = 'PUT';
-                 options.body = JSON.stringify(data);
+                options.headers = {'X-HTTP-Method-Override': 'PUT'};
+                let data = Object.fromEntries(formData);
+                data._method = 'PUT';
+                options.body = JSON.stringify(data);
             }
 
             fetchAPI(url, options)
@@ -364,10 +413,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     refreshSidebar();
                 })
                 .catch(err => {
-                    // Error is already shown by fetchAPI
+                    // Error sudah ditangani oleh fetchAPI
                 });
         });
 
+        // Panggil listener untuk pertama kali saat halaman dimuat
         attachEventListenersToSidebar();
     }
 });
