@@ -270,8 +270,6 @@ const editorConfig = {
 			'resizeImage'
 		]
 	},
-	initialData:
-		'',
 	licenseKey: LICENSE_KEY,
 	link: {
 		addTargetToExternalLinks: true,
@@ -306,7 +304,7 @@ const editorConfig = {
 	menuBar: {
 		isVisible: true
 	},
-	placeholder: 'Type or paste your content here!',
+	placeholder: 'Tulis Sesuatu...',
 	style: {
 		definitions: [
 			{
@@ -357,6 +355,10 @@ const editorConfig = {
 	
     simpleUpload: {
         uploadUrl: '/ckeditor/upload?_token=' + document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+	
+	mediaEmbed: {
+        previewsInData: true
     },
 };
 

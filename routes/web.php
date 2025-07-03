@@ -13,6 +13,12 @@ Route::get('/docs/{category?}/{page?}', [DocumentationController::class, 'show']
 // Upload gambar untuk CKEditor
 Route::post('/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
 
+// Konten Dokumentasi
+// routes/web.php
+Route::post('/docs/save/{menu_id}', [DocumentationController::class, 'saveContent'])->name('docs.save');
+Route::delete('/docs/delete/{menu_id}', [DocumentationController::class, 'deleteContent'])->name('docs.delete');
+
+
 // Otentikasi
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
 Route::post('/login', [LoginController::class, 'login'])->middleware('guest');

@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}"> {{-- Penting untuk AJAX --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}"> 
     <title>{{ $title ?? 'Dokumentasi' }} - Projek PKL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
+	<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .prose h1 { @apply text-3xl font-bold mb-4 text-gray-800; }
@@ -26,6 +28,38 @@
         .modal.show { visibility: visible; opacity: 1; }
         .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); width: 90%; max-width: 600px; transform: translateY(-50px); transition: transform 0.3s ease-out; }
         .modal.show .modal-content { transform: translateY(0); }
+             .buttons{
+            min-width: 100%;
+            margin: 10px;
+            display: flex;
+            padding: 10px;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn{
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .btn-simpan{
+            background-color: #45a65a;
+            color: white;
+        }
+
+        .btn-batal{
+            background-color: #00c0ef;
+            color: white;
+        }
+        .btn-hapus{
+            background-color: red;
+            color: white;
+        }
+        .judul-halaman{
+            margin: 10px 10px 10px 0;
+        }
+        .judul-halaman h1{
+            font-size: 26px
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -54,7 +88,7 @@
 
         <div class="flex flex-1 overflow-hidden">
             {{-- Sidebar --}}
-            <aside class="w-72 flex-shrink-0 overflow-y-auto bg-white border-r border-gray-200 p-6">
+            <aside class="w-72 flex-shrink-0 overflow-y-auto bg-stone border-r border-gray-200 p-6">
                 @auth
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-semibold text-gray-800">Navigasi</h2>
@@ -73,7 +107,7 @@
             </aside>
 
             {{-- Main Content --}}
-            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative">
+            <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
                 @auth
                 @if (isset($selectedNavItem))
                     <div class="absolute top-8 right-8 z-10">
@@ -81,9 +115,14 @@
                     </div>
                 @endif
                 @endauth
-                <div class="prose max-w-none" id="documentation-content">
-                    {!! $content !!}
+                <div class="judul-halaman">
+                    <h1> {!! ucfirst($currentPage) !!}</h1>
                 </div>
+                <div class="prose max-w-none" id="documentation-content" >
+                    @include($viewPath)
+                </div>
+
+
             </main>
         </div>
     </div>
@@ -146,6 +185,10 @@
 
     {{-- Container untuk notifikasi --}}
     <div id="notification-container"></div>
+
+
+<script src="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.umd.js" crossorigin></script>
+<script src="{{ asset('ckeditor/main.js') }}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {

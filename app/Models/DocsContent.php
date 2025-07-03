@@ -19,6 +19,7 @@ class DocsContent extends Model
      */
     protected $fillable = [
         'content',
+        'menu_id',
     ];
 
     /**
