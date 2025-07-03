@@ -9,33 +9,79 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\RedirectResponse;
 
 class DocumentationController extends Controller
 {
-    public function show($category = 'epesantren', $page = 'introduction'): View
+    /**
+     * Menangani permintaan ke halaman utama (/).
+     * Mencari halaman default dan mengalihkan pengguna ke sana.
+     */
+    public function index(): View|RedirectResponse
     {
-        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
-        $navigation = NavMenu::buildTree($allMenus);
-        $selectedNavItem = $allMenus->firstWhere('menu_link', route('docs', ['category' => $category, 'page' => $page]));
+        $defaultCategory = 'epesantren';
 
-        if (isset($selectedNavItem)) {
-            $menuIds = $selectedNavItem->menu_id;
-        } else {
-            $menuIds = 0;
+        $firstMenu = NavMenu::where('category', $defaultCategory)
+            ->where('menu_child', 0)
+            ->orderBy('menu_order', 'asc')
+            ->first();
+
+        if (!$firstMenu) {
+            return view('docs.welcome', [
+                'title' => 'Selamat Datang di Dokumentasi',
+                'message' => 'Belum ada konten dokumentasi yang dibuat. Silakan login sebagai admin untuk memulai.'
+            ]);
+        }
+        
+        $pageSlug = Str::slug($firstMenu->menu_nama);
+
+        return redirect()->route('docs', [
+            'category' => $defaultCategory,
+            'page' => $pageSlug
+        ]);
+    }
+
+    /**
+     * Menampilkan halaman dokumentasi yang spesifik.
+     */
+    public function show($category, $page = null): View|RedirectResponse
+    {
+        if (is_null($page)) {
+            $firstMenu = NavMenu::where('category', $category)
+                ->where('menu_child', 0)
+                ->orderBy('menu_order', 'asc')
+                ->first();
+
+            if (!$firstMenu) {
+                abort(404, 'Dokumentasi untuk kategori ini tidak ditemukan.');
+            }
+
+            $pageSlug = Str::slug($firstMenu->menu_nama);
+            
+            return redirect()->route('docs', ['category' => $category, 'page' => $pageSlug]);
         }
 
+        $allMenus = NavMenu::where('category', $category)->orderBy('menu_order')->get();
+        $navigation = NavMenu::buildTree($allMenus);
 
-        $menusWithDocs = NavMenu::with('docsContent')->where('menu_id', $menuIds)->first();
+        $selectedNavItem = $allMenus->first(function ($menu) use ($page) {
+            if (Str::slug($menu->menu_nama) === $page) {
+                return true;
+            }
+            if ($menu->menu_link === $page) {
+                return true;
+            }
+            return false;
+        });
 
+        $menuId = $selectedNavItem->menu_id ?? 0;
+        $menusWithDocs = NavMenu::with('docsContent')->find($menuId);
 
-        // Path view yang ingin dirender
         $viewPath = "docs.pages.{$category}.{$page}";
-        $filePath = resource_path("views/docs/pages/{$category}/{$page}.blade.php");
+        $filePath = resource_path("views/".str_replace('.', '/', $viewPath).".blade.php");
 
-        // Jika belum ada, generate file otomatis
         if (!File::exists($filePath)) {
             File::ensureDirectoryExists(resource_path("views/docs/pages/{$category}"));
-
             File::put(
                 $filePath,
                 <<<BLADE
@@ -58,7 +104,6 @@ class DocumentationController extends Controller
                 <div class="buttons">
                     <button type="submit" class="btn btn-simpan">Simpan</button>
                     <a href="{{ route('docs', ['category' => \$currentCategory, 'page' => \$currentPage]) }}" class="btn btn-batal">Batal</a>
-
                 </form>
                 <form action="{{ route('docs.delete', ['menu_id' => \$menu_id]) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus konten ini?')">
                     @csrf
@@ -66,31 +111,27 @@ class DocumentationController extends Controller
                     <button type="submit" class="btn btn-hapus">Hapus</button>
                 </form>
             </div>
-
-</div>
+        </div>
+    </div>
 @endauth
 BLADE
             );
         }
 
-        $allParentMenus = NavMenu::where('category', $category)
-            ->where('menu_child', 0)
-            ->orderBy('menu_nama')->get();
-
         return view('docs.index', [
-            'title' => 'Dokumentasi ' . Str::headline($category),
-            'navigation' => $navigation,
+            'title'           => 'Dokumentasi ' . Str::headline($category),
+            'navigation'      => $navigation,
             'currentCategory' => $category,
-            'currentPage' => $page,
+            'currentPage'     => $page,
             'selectedNavItem' => $selectedNavItem,
-            'menu_id' => $menuIds,
-            'allParentMenus' => $allParentMenus,
-            'viewPath' => $viewPath,
-            'contentDocs' => $menusWithDocs,
+            'menu_id'         => $menuId,
+            'allParentMenus'  => $allMenus->where('menu_child', 0),
+            'viewPath'        => $viewPath,
+            'contentDocs'     => $menusWithDocs,
         ]);
     }
 
-    // Fungsi simpan/update konten dokumentasi
+    // Fungsi saveContent, deleteContent, dan search tetap sama...
     public function saveContent(Request $request, $menu_id)
     {
         $validator = Validator::make($request->all(), [
@@ -101,7 +142,7 @@ BLADE
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $content = DocsContent::updateOrCreate(
+        DocsContent::updateOrCreate(
             ['menu_id' => $menu_id],
             ['content' => $request->input('content')]
         );
@@ -109,7 +150,6 @@ BLADE
         return redirect()->back()->with('success', 'Konten berhasil disimpan.');
     }
 
-    // Fungsi hapus konten dokumentasi
     public function deleteContent($menu_id)
     {
         $doc = DocsContent::where('menu_id', $menu_id)->first();
@@ -120,5 +160,50 @@ BLADE
         }
 
         return redirect()->back()->with('error', 'Konten tidak ditemukan.');
+    }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        $category = $request->input('category', 'epesantren');
+
+        if (!$query) {
+            return response()->json(['results' => []]);
+        }
+
+        $results = [];
+
+        $menuMatches = NavMenu::where('category', $category)
+            ->where('menu_nama', 'LIKE', "%{$query}%")
+            ->get();
+
+        foreach ($menuMatches as $menu) {
+            $results[$menu->menu_id] = [
+                'id' => $menu->menu_id,
+                'name' => $menu->menu_nama,
+                'url' => route('docs', ['category' => $menu->category, 'page' => Str::slug($menu->menu_nama)]),
+                'context' => 'Judul Menu',
+            ];
+        }
+
+        $contentMatches = DocsContent::with('menu')
+            ->whereHas('menu', function ($q) use ($category) {
+                $q->where('category', $category);
+            })
+            ->where('content', 'LIKE', "%{$query}%")
+            ->get();
+
+        foreach ($contentMatches as $content) {
+            if ($content->menu && !isset($results[$content->menu->menu_id])) {
+                $results[$content->menu->menu_id] = [
+                    'id' => $content->menu->menu_id,
+                    'name' => $content->menu->menu_nama,
+                    'url' => route('docs', ['category' => $content->menu->category, 'page' => Str::slug($content->menu->menu_nama)]),
+                    'context' => Str::limit(strip_tags($content->content), 100),
+                ];
+            }
+        }
+
+        return response()->json(['results' => array_values($results)]);
     }
 }
