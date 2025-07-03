@@ -121,4 +121,55 @@ BLADE
 
         return redirect()->back()->with('error', 'Konten tidak ditemukan.');
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        $category = $request->input('category', 'epesantren');
+    
+        if (!$query) {
+            return response()->json(['results' => []]);
+        }
+    
+        $results = [];
+    
+        // TAHAP 1: Cari berdasarkan nama menu
+        $menuMatches = \App\Models\NavMenu::where('category', $category)
+            ->where('menu_nama', 'LIKE', "%{$query}%")
+            ->get();
+    
+        foreach ($menuMatches as $menu) {
+            // Simpan hasil ke dalam array, gunakan menu_id sebagai kunci untuk menghindari duplikat
+            $results[$menu->menu_id] = [
+                'id' => $menu->menu_id,
+                'name' => $menu->menu_nama,
+                'url' => route('docs', ['category' => $menu->category, 'page' => \Illuminate\Support\Str::slug($menu->menu_nama)]),
+                'context' => 'Judul Menu', // Konteks bahwa ini adalah judul
+            ];
+        }
+    
+        // TAHAP 2: Cari berdasarkan isi konten dari setiap halaman
+        $contentMatches = \App\Models\DocsContent::with('menu')
+            ->whereHas('menu', function ($q) use ($category) {
+                $q->where('category', $category);
+            })
+            ->where('content', 'LIKE', "%{$query}%") // Baris ini yang mencari di dalam konten
+            ->get();
+    
+        foreach ($contentMatches as $content) {
+            // Hanya tambahkan jika belum ada dari hasil pencarian judul
+            if ($content->menu && !isset($results[$content->menu->menu_id])) {
+                $results[$content->menu->menu_id] = [
+                    'id' => $content->menu->menu_id,
+                    'name' => $content->menu->menu_nama,
+                    'url' => route('docs', ['category' => $content->menu->category, 'page' => \Illuminate\Support\Str::slug($content->menu->menu_nama)]),
+                    'context' => \Illuminate\Support\Str::limit(strip_tags($content->content), 100), // Tampilkan sedikit cuplikan konten
+                ];
+            }
+        }
+    
+        // Kembalikan hasil gabungan sebagai JSON
+        return response()->json(['results' => array_values($results)]);
+    }
+
 }

@@ -98,13 +98,27 @@
                 </div>
                 @endauth
 
-    <div class="relative mb-4">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-            <i class="fa fa-search text-gray-400"></i>
-        </span>
-        <input type="text" id="menu-search-input" placeholder="Cari menu..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {{-- Ganti blok input pencarian lama dengan form ini --}}
+<form id="search-form" class="relative mb-4">
+    <input type="text" id="menu-search-input" placeholder="Cari menu & konten..." class="w-full pl-4 pr-10 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <button type="submit" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600">
+        <i class="fa fa-search"></i>
+    </button>
+</form>
+    <div id="search-results-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800" id="search-modal-title">Hasil Pencarian</h3>
+                <button id="close-search-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div id="search-results-body" class="max-h-[60vh] overflow-y-auto">
+                {{-- Hasil pencarian akan dimuat di sini oleh JavaScript --}}
+            </div>
+        </div>
     </div>
 
+    {{-- Container untuk notifikasi --}}
+    <div id="notification-container"></div>
                 <nav id="sidebar-navigation">
                     @include('docs._menu_item', [
                         'items' => $navigation,
@@ -207,45 +221,66 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentCategory = document.getElementById('form_category')?.value || 'epesantren';
 
     // =================================================
-    // LOGIKA PENCARIAN MENU (DITEMPATKAN DI SINI)
+    // LOGIKA PENCARIAN POPUP (MODAL)
     // =================================================
+    const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('menu-search-input');
-    const sidebarNav = document.getElementById('sidebar-navigation');
+    const searchModal = document.getElementById('search-results-modal');
+    const searchResultsBody = document.getElementById('search-results-body');
+    const closeSearchModalBtn = document.getElementById('close-search-modal-btn');
+    const searchModalTitle = document.getElementById('search-modal-title');
 
-    if (searchInput && sidebarNav) {
-        searchInput.addEventListener('input', () => {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            const allItems = sidebarNav.querySelectorAll('.my-1.group');
+    if (searchForm) {
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
 
-            if (searchTerm === '') {
-                allItems.forEach(item => {
-                    item.style.display = 'block';
-                });
+            if (query.length < 2) {
+                showNotification('Masukkan minimal 2 karakter untuk mencari.', 'error');
                 return;
             }
 
-            allItems.forEach(item => {
-                item.style.display = 'none';
-            });
+            searchModal.classList.add('show');
+            searchModalTitle.textContent = `Mencari untuk: "${query}"`;
+            searchResultsBody.innerHTML = '<p class="text-gray-500">Memuat hasil...</p>';
 
-            allItems.forEach(item => {
-                const link = item.querySelector('.menu-item-link');
-                const itemName = link ? link.textContent.toLowerCase() : '';
+            try {
+                const data = await fetchAPI(`/api/search?query=${query}&category=${currentCategory}`);
+                searchResultsBody.innerHTML = ''; // Kosongkan hasil
 
-                if (itemName.includes(searchTerm)) {
-                    item.style.display = 'block';
-                    let parent = item.parentElement.closest('.my-1.group');
-                    while (parent) {
-                        parent.style.display = 'block';
-                        parent = parent.parentElement.closest('.my-1.group');
-                    }
+                if (data.results && data.results.length > 0) {
+                    const resultList = document.createElement('ul');
+                    resultList.className = 'space-y-3';
+                    data.results.forEach(result => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <a href="${result.url}" class="block p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div class="font-semibold text-blue-600">${result.name}</div>
+                                <p class="text-sm text-gray-600 mt-1">${result.context}</p>
+                            </a>
+                        `;
+                        resultList.appendChild(li);
+                    });
+                    searchResultsBody.appendChild(resultList);
+                } else {
+                    searchResultsBody.innerHTML = '<p class="text-gray-500">Tidak ada hasil yang ditemukan.</p>';
                 }
-            });
+            } catch (error) {
+                searchResultsBody.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat mencari.</p>';
+            }
         });
     }
 
+    const closeSearchModal = () => searchModal.classList.remove('show');
+    if(closeSearchModalBtn) closeSearchModalBtn.addEventListener('click', closeSearchModal);
+    if(searchModal) searchModal.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
+            closeSearchModal();
+        }
+    });
+
     // =================================
-    // UTILITIES
+    // FUNGSI UTILITIES
     // =================================
     const showNotification = (message, type = 'success') => {
         const container = document.getElementById('notification-container');
@@ -289,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // =================================
-    // MODAL & FORM LOGIC
+    // LOGIKA MODAL EDIT MENU & SIDEBAR
     // =================================
     const menuModal = document.getElementById('menu-modal');
     const menuForm = document.getElementById('menu-form');
@@ -322,17 +357,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
             document.getElementById('sidebar-navigation').innerHTML = data.html;
-            attachEventListenersToSidebar(); // Pasang ulang listener ke konten baru
+            attachEventListenersToSidebar();
         } catch (error) {
             showNotification('Gagal memuat ulang sidebar.', 'error');
         }
     };
 
-    // =================================
-    // EVENT LISTENERS
-    // =================================
     const attachEventListenersToSidebar = () => {
-        // Edit button
         document.querySelectorAll('.edit-menu-btn').forEach(button => {
             button.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -346,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Delete button
         document.querySelectorAll('.delete-menu-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -362,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Add Child button
         document.querySelectorAll('.add-child-menu-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -370,17 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 openMenuModal('create', null, parentId);
             });
         });
-        
-        // Menu item link
-        document.querySelectorAll('.menu-item-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                // Allow normal navigation
-            });
-        });
     };
     
     // =================================
-    // INITIALIZATION
+    // INISIALISASI EVENT LISTENER AWAL
     // =================================
     if (menuForm) {
         document.getElementById('add-parent-menu-btn').addEventListener('click', () => openMenuModal('create', null, 0));
@@ -394,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
             
-            // Logika untuk form submission...
             const options = {
                 method: method === 'PUT' ? 'POST' : method,
                 body: JSON.stringify(Object.fromEntries(formData)),
@@ -417,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         });
 
-        // Panggil listener untuk pertama kali saat halaman dimuat
         attachEventListenersToSidebar();
     }
 });
