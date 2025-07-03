@@ -74,8 +74,9 @@ BLADE
         }
 
         $allParentMenus = NavMenu::where('category', $category)
-            ->where('menu_child', 0)
-            ->orderBy('menu_nama')->get();
+            ->orderBy('menu_nama')
+            ->get(['menu_id', 'menu_nama']);
+
 
         return view('docs.index', [
             'title' => 'Dokumentasi ' . Str::headline($category),

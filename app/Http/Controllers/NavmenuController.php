@@ -24,8 +24,9 @@ class NavmenuController extends Controller
      */
     public function getParentMenus($category)
     {
-        $parents = NavMenu::where('category', $category)->where('menu_child', 0)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']);
-        return response()->json($parents);
+        $parents = NavMenu::where('category', $category)
+            ->orderBy('menu_nama')
+            ->get(['menu_id', 'menu_nama']);
     }
 
     /**
@@ -70,7 +71,7 @@ class NavmenuController extends Controller
 
             $menu->docsContent()->create(['content' => '# ' . $request->menu_nama]);
         });
-        
+
         return response()->json(['success' => 'Menu berhasil ditambahkan!']);
     }
 
@@ -116,7 +117,7 @@ class NavmenuController extends Controller
         // $request->validate(['content' => 'required|string']);
         // $navMenu->docsContent()->update(['content' => $request->content]);
         // return response()->json(['success' => 'Konten berhasil diperbarui']);
-        
+
         return response()->json(['message' => 'Fungsi update konten belum diimplementasikan'], 501);
     }
 }

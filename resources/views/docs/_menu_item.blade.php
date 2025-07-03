@@ -10,9 +10,9 @@
         <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {{-- Tombol Tambah Anak (hanya untuk level 1) --}}
             @if ($item->menu_child >= 0)
-            <button data-parent-id="{{ $item->menu_id }}" class="add-child-menu-btn text-green-500 hover:text-green-700 p-1" title="Tambah Sub Menu">
-                <i class="fa-solid fa-plus-circle"></i>
-            </button>
+                <button data-parent-id="{{ $item->menu_id }}" class="add-child-menu-btn text-green-500 hover:text-green-700 p-1" title="Tambah Sub Menu">
+                    <i class="fa-solid fa-plus-circle"></i>
+                </button>
             @endif
             {{-- Tombol Edit --}}
             <button data-menu-id="{{ $item->menu_id }}" class="edit-menu-btn text-blue-500 hover:text-blue-700 p-1" title="Edit Menu">

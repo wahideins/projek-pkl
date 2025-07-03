@@ -116,7 +116,7 @@
                 @endif
                 @endauth
                 <div class="judul-halaman">
-                    <h1> {!! ucfirst($currentPage) !!}</h1>
+                    <h1> {!! str_replace('-',' ', ucfirst($currentPage)) !!}</h1>
                 </div>
                 <div class="prose max-w-none" id="documentation-content" >
                     @include($viewPath)
