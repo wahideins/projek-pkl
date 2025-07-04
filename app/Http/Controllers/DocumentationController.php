@@ -1,4 +1,5 @@
 <?php
+// File: app/Http/Controllers/DocumentationController.php
 
 namespace App\Http\Controllers;
 
@@ -68,7 +69,9 @@ class DocumentationController extends Controller
             if (Str::slug($menu->menu_nama) === $page) {
                 return true;
             }
-            if ($menu->menu_link === $page) {
+            $menuLinkPath = parse_url($menu->menu_link, PHP_URL_PATH);
+            $requestedPath = "docs/{$menu->category}/{$page}";
+            if ($menuLinkPath && Str::endsWith($menuLinkPath, $requestedPath)) {
                 return true;
             }
             return false;
@@ -125,13 +128,13 @@ BLADE
             'currentPage'     => $page,
             'selectedNavItem' => $selectedNavItem,
             'menu_id'         => $menuId,
-            'allParentMenus'  => $allMenus->where('menu_child', 0),
+            // Perbaikan ini sudah benar di sini
+            'allParentMenus'  => NavMenu::where('category', $category)->orderBy('menu_nama')->get(['menu_id', 'menu_nama']),
             'viewPath'        => $viewPath,
             'contentDocs'     => $menusWithDocs,
         ]);
     }
 
-    // Fungsi saveContent, deleteContent, dan search tetap sama...
     public function saveContent(Request $request, $menu_id)
     {
         $validator = Validator::make($request->all(), [
@@ -173,8 +176,10 @@ BLADE
 
         $results = [];
 
+        $searchTerm = '%' . strtolower($query) . '%';
+        
         $menuMatches = NavMenu::where('category', $category)
-            ->where('menu_nama', 'LIKE', "%{$query}%")
+            ->whereRaw('LOWER(TRIM(menu_nama)) LIKE ?', [$searchTerm])
             ->get();
 
         foreach ($menuMatches as $menu) {
