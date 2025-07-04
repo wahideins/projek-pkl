@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('ckeditor/style.css') }}">
-    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
+	<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/45.2.1/ckeditor5.css" crossorigin>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .prose h1 { @apply text-3xl font-bold mb-4 text-gray-800; }
@@ -41,6 +41,14 @@
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.4s ease-in-out;
+             .buttons{
+            min-width: 100%;
+            margin: 10px;
+            display: flex;
+            padding: 10px;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .submenu-container.open {
             max-height: 1000px; /* Nilai besar untuk menampung semua submenu */
@@ -116,7 +124,13 @@
             <main class="flex-1 overflow-y-auto p-8 lg:p-12 relative" style="background-color: white">
                 @auth
                 @if (isset($selectedNavItem))
+
                     <div class="absolute top-8 right-8 z-10"></div>
+
+                    <div class="absolute top-8 right-8 z-10">
+                         {{-- Tombol Edit Konten bisa ditambahkan di sini jika perlu --}}
+                    </div>
+
                 @endif
                 @endauth
                 <div class="judul-halaman">
@@ -125,6 +139,8 @@
                 <div class="prose max-w-none" id="documentation-content" >
                     @include($viewPath)
                 </div>
+
+
             </main>
         </div>
     </div>
@@ -226,6 +242,7 @@
             }
         };
 
+
         // =================================
         // LOGIKA PENCARIAN
         // =================================
@@ -267,6 +284,77 @@
                     } else {
                         searchResultsBody.innerHTML = '<p class="text-gray-500">Tidak ada hasil yang ditemukan.</p>';
                     }
+
+        const mergedOptions = { ...defaultOptions, ...options };
+        mergedOptions.headers = { ...defaultOptions.headers, ...options.headers };
+
+        try {
+            const response = await fetch(url, mergedOptions);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch API Error:', error);
+            showNotification(error.message, 'error');
+            throw error;
+        }
+    };
+    
+    //=================================
+    // MODAL & FORM LOGIC
+    //=================================
+    const menuModal = document.getElementById('menu-modal');
+    const menuForm = document.getElementById('menu-form');
+    const modalTitle = document.getElementById('modal-title');
+
+    const openMenuModal = (mode, menuData = null, parentId = 0) => {
+        menuForm.reset();
+        document.getElementById('form_menu_id').value = '';
+        document.getElementById('form_method').value = mode === 'edit' ? 'PUT' : 'POST';
+
+        if (mode === 'create') {
+            modalTitle.textContent = 'Tambah Menu Baru';
+            document.getElementById('form_menu_child').value = parentId;
+            document.getElementById('form_menu_status').checked = true;
+        } else if (mode === 'edit' && menuData) {
+            modalTitle.textContent = `Edit Menu: ${menuData.menu_nama}`;
+            document.getElementById('form_menu_id').value = menuData.menu_id;
+            document.getElementById('form_menu_nama').value = menuData.menu_nama;
+            document.getElementById('form_menu_icon').value = menuData.menu_icon;
+            document.getElementById('form_menu_child').value = menuData.menu_child;
+            document.getElementById('form_menu_order').value = menuData.menu_order;
+            document.getElementById('form_menu_status').checked = menuData.menu_status == 1;
+        }
+        menuModal.classList.add('show');
+    };
+
+    const closeMenuModal = () => menuModal.classList.remove('show');
+
+    const refreshSidebar = async () => {
+        try {
+            const data = await fetchAPI(`/api/navigasi/all/${currentCategory}`);
+            const sidebarNav = document.getElementById('sidebar-navigation');
+            sidebarNav.innerHTML = data.html;
+            attachEventListenersToSidebar(); // Re-attach listeners to new content
+        } catch (error) {
+            showNotification('Gagal memuat ulang sidebar.', 'error');
+        }
+    };
+
+    //=================================
+    // EVENT LISTENERS
+    //=================================
+    const attachEventListenersToSidebar = () => {
+        // Edit button
+        document.querySelectorAll('.edit-menu-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const menuId = e.currentTarget.dataset.menuId;
+                try {
+                    const menuData = await fetchAPI(`/api/navigasi/${menuId}`);
+                    openMenuModal('edit', menuData);
                 } catch (error) {
                     searchResultsBody.innerHTML = '<p class="text-red-500">Terjadi kesalahan saat mencari.</p>';
                 }
@@ -363,6 +451,61 @@
             let parentApiUrl = `/api/navigasi/parents/${currentCategory}`;
             if (editingMenuId) {
                 parentApiUrl += `?editing_menu_id=${editingMenuId}`;
+        // Delete button
+        document.querySelectorAll('.delete-menu-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menuId = e.currentTarget.dataset.menuId;
+                const menuNama = e.currentTarget.dataset.menuNama;
+                if (confirm(`Yakin ingin menghapus menu "${menuNama}"? Ini akan menghapus semua sub-menunya.`)) {
+                    fetchAPI(`/api/navigasi/${menuId}`, { method: 'DELETE' })
+                        .then(data => {
+                            showNotification(data.success, 'success');
+                            refreshSidebar();
+                        });
+                }
+            });
+        });
+
+        // Add Child button
+        document.querySelectorAll('.add-child-menu-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const parentId = e.currentTarget.dataset.parentId;
+                openMenuModal('create', null, parentId);
+            });
+        });
+        
+        // Menu item link
+        document.querySelectorAll('.menu-item-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                // Allow normal navigation
+            });
+        });
+    };
+    
+    // Initial listeners for auth-only elements
+    if (menuForm) {
+        document.getElementById('add-parent-menu-btn').addEventListener('click', () => openMenuModal('create', null, 0));
+        document.getElementById('cancel-menu-form-btn').addEventListener('click', closeMenuModal);
+
+        menuForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(menuForm);
+            const menuId = formData.get('menu_id');
+            const method = document.getElementById('form_method').value;
+            
+            const url = menuId ? `/api/navigasi/${menuId}` : '/api/navigasi';
+            const options = {
+                method: method === 'PUT' ? 'POST' : method, // HTML forms don't support PUT, so we use POST and a hidden _method field
+                body: JSON.stringify(Object.fromEntries(formData)),
+            };
+            // For PUT, we add the method override header or include it in the body
+            if (method === 'PUT') {
+                 options.headers = {'X-HTTP-Method-Override': 'PUT'};
+                 let data = Object.fromEntries(formData);
+                 data._method = 'PUT';
+                 options.body = JSON.stringify(data);
             }
 
             fetchAPI(parentApiUrl) // Fetch parent menus based on context
@@ -395,6 +538,10 @@
 
             menuModal.classList.add('show');
         };
+        attachEventListenersToSidebar();
+    }
+});
+</script>
 
         const closeMenuModal = () => menuModal.classList.remove('show');
 
